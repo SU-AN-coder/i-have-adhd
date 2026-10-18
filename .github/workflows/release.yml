@@ -1,0 +1,52 @@
+name: release
+
+# Publishes a GitHub Release for a version tag, so anyone watching the repository
+# with "Releases only" gets a notification (#257). The tag has to match the
+# version every manifest declares, otherwise the release is refused: an updater
+# skips a plugin whose version has not changed (#237), so a mismatched release
+# would reach nobody.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish, for example v0.4.2"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Resolve the tag
+        env:
+          DISPATCH_TAG: ${{ inputs.tag }}
+        run: |
+          if [ -n "$DISPATCH_TAG" ]; then
+            echo "TAG=$DISPATCH_TAG" >> "$GITHUB_ENV"
+          else
+            echo "TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          fi
+      - name: Check the tag against the manifests
+        run: python3 scripts/check_release_version.py "$TAG"
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" \
+            --verify-tag \
+            --title "$TAG" \
+            --generate-notes

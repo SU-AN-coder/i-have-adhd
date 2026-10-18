@@ -87,6 +87,23 @@ python3 scripts/run_evals.py validate
 
 For behavior changes, add or update representative eval cases when needed, run paired baseline/candidate evaluations under the same conditions, and apply the release gate. For hook or plugin changes, verify loading in an isolated configuration directory. If a check was not run, say so and explain why; never invent results or treat inspection as execution.
 
+## Releases
+
+GitHub Releases are what a watcher subscribes to, so every version is published from a tag:
+
+1. Bump `version` in every manifest that carries one: `package.json`, `kimi.plugin.json`,
+   `gemini-extension.json`, `qwen-extension.json`, `.claude-plugin/plugin.json`,
+   `.codex-plugin/plugin.json`. They must stay equal. `claude plugin update` and the other
+   runtime updaters skip a plugin whose `version` has not changed (#237), so a manifest left
+   behind at the old number keeps that runtime's users on the old files.
+2. Commit the bump, tag that commit `v<version>`, and push the tag.
+3. `.github/workflows/release.yml` checks the tag against the manifests and publishes the
+   release with generated notes. A tag that disagrees with the manifests publishes nothing.
+
+`python3 scripts/check_release_version.py v<version>` runs the same check locally. To publish a
+release for a tag that is already pushed, run the `release` workflow from the Actions tab and
+give it the tag.
+
 ## Documentation and checklist
 
 Keep examples safe to copy: use harmless fixtures, explicit placeholders, and read-only previews. Never include real secrets, personal paths, production identifiers, or commands that could damage a reader's environment. Distinguish required behavior from suggestions and avoid unsupported medical, accessibility, platform, or performance claims.
