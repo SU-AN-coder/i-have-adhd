@@ -113,6 +113,29 @@ class AlwaysOnHookTest(unittest.TestCase):
 
         self.assertEqual(1, len(set(outputs.values())))
 
+    def test_runtimes_strip_an_empty_frontmatter_block(self):
+        # A block with no keys in it is still frontmatter: "---" on the first
+        # two lines. A pattern that demands a content line before the closing
+        # delimiter leaves both fences in the injected ruleset.
+        skill_path = self.plugin_root / "skills" / "i-have-adhd" / "SKILL.md"
+        skill_path.write_text("---\n---\nFixture body.\n")
+        (self.config_dir / ".i-have-adhd-always").touch()
+        outputs = {}
+
+        for name, command in self.runtimes():
+            with self.subTest(runtime=name):
+                result = self.run_hook(command)
+                self.assertEqual(0, result.returncode)
+                self.assertEqual("", result.stderr)
+                normalized = self.normalize(result.stdout)
+                banner, separator, body = normalized.rstrip("\n").partition("\n\n")
+                self.assertTrue(separator, normalized)
+                self.assertNotIn("---", banner)
+                self.assertEqual("Fixture body.", body)
+                outputs[name] = normalized
+
+        self.assertEqual(1, len(set(outputs.values())))
+
     def test_runtimes_keep_content_when_frontmatter_is_unclosed(self):
         # An opening --- with no closing delimiter is not frontmatter. Keeping
         # the whole file beats injecting a banner that promises "the ruleset

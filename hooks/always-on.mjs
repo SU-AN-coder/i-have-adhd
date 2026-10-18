@@ -25,10 +25,11 @@ try {
   if (!fs.existsSync(skillPath)) process.exit(0);
 
   // Strip a leading YAML frontmatter block (--- ... --- at the very top of file).
+  // The block may be empty, so the body between the delimiters is optional.
   const body = fs
     .readFileSync(skillPath, "utf8")
     .replace(
-      /^---[^\S\r\n]*\r?\n[\s\S]*?\r?\n---[^\S\r\n]*(?:\r?\n|$)/,
+      /^---[^\S\r\n]*\r?\n(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/,
       "",
     )
     .replace(/(?:\r?\n)+$/, "");

@@ -85,6 +85,20 @@ class OpenCodePluginTest(unittest.TestCase):
                 self.assertNotIn("name: fixture", result.stdout)
                 self.assertIn("\n\nFixture body.", result.stdout)
 
+    def test_strips_an_empty_frontmatter_block(self):
+        # "---" on the first two lines is a valid block with no keys. The
+        # injected ruleset must not carry the fences.
+        self.write_skill("---\n---\nFixture body.\n")
+        self.opt_in()
+        for mode in INJECTION_MODES:
+            with self.subTest(mode=mode):
+                result = self.run_plugin(mode)
+                self.assertEqual(0, result.returncode, result.stderr)
+                banner, separator, body = result.stdout.rstrip("\n").partition("\n\n")
+                self.assertTrue(separator, result.stdout)
+                self.assertNotIn("---", banner)
+                self.assertEqual("Fixture body.", body)
+
     def test_keeps_content_when_frontmatter_is_unclosed(self):
         self.write_skill("---\nname: fixture\nFixture body, fence never closed.\n")
         self.opt_in()

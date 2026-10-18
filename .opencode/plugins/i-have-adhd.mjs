@@ -31,11 +31,12 @@ const flagPath = path.join(
   '.i-have-adhd-always',
 );
 
-// Match the shared hooks' frontmatter stripping and newline handling.
+// Match the shared hooks' frontmatter stripping and newline handling. The
+// block may be empty, so the body between the delimiters is optional.
 function rulesetBody() {
   return fs
     .readFileSync(skillPath, 'utf8')
-    .replace(/^---[^\S\r\n]*\r?\n[\s\S]*?\r?\n---[^\S\r\n]*(?:\r?\n|$)/, '')
+    .replace(/^---[^\S\r\n]*\r?\n(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/, '')
     .replace(/(?:\r?\n)+$/, '');
 }
 
