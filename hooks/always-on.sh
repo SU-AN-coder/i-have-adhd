@@ -5,16 +5,54 @@
 #
 # POSIX fallback for environments where the default Node hook cannot run. It
 # works with sh on macOS/Linux and Git Bash on Windows without a Node install.
+#
+# When CLAUDE_CODE_SUBPROCESS_ENV_SCRUB strips CLAUDE_CONFIG_DIR from the hook
+# environment (#255), the config dir is recovered from the plugin install path
+# (<config dir>/plugins/cache/...); the default ~/.claude stays as a fallback.
 
-claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-flag_path="$claude_dir/.i-have-adhd-always"
+flag_name=".i-have-adhd-always"
+
+# Echo the config dir implied by an installed plugin path, or nothing when the
+# script does not live under a plugins directory (e.g. a --plugin-dir checkout).
+# The backslash patterns cover a Git Bash caller that passes a native Windows
+# path straight through.
+config_dir_from_install_path() {
+  case "$1" in
+    */plugins/cache/*)    printf '%s\n' "${1%%/plugins/cache/*}" ;;
+    *\\plugins\\cache\\*) printf '%s\n' "${1%%\\plugins\\cache\\*}" ;;
+    */plugins/*)          printf '%s\n' "${1%%/plugins/*}" ;;
+    *\\plugins\\*)        printf '%s\n' "${1%%\\plugins\\*}" ;;
+    *) return 1 ;;
+  esac
+}
+
+script_dir=$(dirname -- "$0")
+
+# CLAUDE_CONFIG_DIR stays authoritative when it is present: a user who pointed
+# Claude Code at another config dir should not have the hook fire from a
+# location they did not choose. Without it, the config dir implied by the
+# install path and the default ~/.claude are tried in order, and only a
+# candidate that actually holds the flag counts.
+if [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
+  flag_path="$CLAUDE_CONFIG_DIR/$flag_name"
+else
+  flag_path=""
+  derived_dir=$(config_dir_from_install_path "$script_dir") || derived_dir=""
+  for candidate_dir in "$derived_dir" "$HOME/.claude"; do
+    [ -n "$candidate_dir" ] || continue
+    if [ -f "$candidate_dir/$flag_name" ]; then
+      flag_path="$candidate_dir/$flag_name"
+      break
+    fi
+  done
+fi
 
 # Only fire when the user has opted in.
+[ -n "$flag_path" ] || exit 0
 [ -f "$flag_path" ] || exit 0
 
 # $0 is the absolute script path substituted into hooks.json by Claude Code,
 # so resolve SKILL.md relative to it instead of trusting an exported env var.
-script_dir=$(dirname -- "$0")
 skill_path="$script_dir/../skills/i-have-adhd/SKILL.md"
 [ -f "$skill_path" ] || exit 0
 

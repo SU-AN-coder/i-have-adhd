@@ -165,6 +165,8 @@ If you use a custom Claude configuration directory, create the flag there instea
 touch "$CLAUDE_CONFIG_DIR/.i-have-adhd-always"
 ```
 
+If Claude Code does not pass `CLAUDE_CONFIG_DIR` to your hooks (for example with `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` in `settings.json`), the hook still finds the flag: it derives the config dir from the installed plugin path under `<config dir>/plugins/cache/`, and falls back to `~/.claude` when that does not apply. Setting `CLAUDE_CONFIG_DIR` for the hook keeps it authoritative.
+
 Back to on-demand:
 
 ```bash
